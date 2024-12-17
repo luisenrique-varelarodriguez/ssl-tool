@@ -66,7 +66,10 @@ func main() {
         Use:   "generate-csr",
         Short: "Generate a new CSR and private key",
         RunE: func(cmd *cobra.Command, args []string) error {
-            // Usar defaults de config si faltan
+            // Usar valores predeterminados de la configuración si no se proporcionan flags
+            if domain == "" && config.DefaultDomain != "" {
+                domain = config.DefaultDomain
+            }
             if country == "" && config.DefaultCountry != "" {
                 country = config.DefaultCountry
             }
@@ -86,7 +89,7 @@ func main() {
                 locality = promptFor("Locality (City)", locality)
                 organization = promptFor("Organization", organization)
             } else {
-                // Modo no interactivo: deben estar todos los datos
+                // Validar que todos los parámetros requeridos estén presentes
                 for _, p := range requiredParams {
                     val := getParamValue(p)
                     if val == "" {
@@ -95,10 +98,12 @@ func main() {
                 }
             }
 
+            // Validar parámetros antes de generar el CSR
             if err := internal.ValidateCSRParams(domain, country, locality, organization); err != nil {
                 return err
             }
 
+            // Generar el CSR
             return internal.GenerateCSR(domain, country, locality, organization)
         },
     }
