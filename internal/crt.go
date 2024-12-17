@@ -27,21 +27,25 @@ func ExtractInfo(filePath, outputPath string) error {
 
 	switch block.Type {
 	case "CERTIFICATE":
+		// Procesar archivo de certificado (CRT)
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return fmt.Errorf("error parsing certificate: %v", err)
 		}
+		config.DefaultDomain = cert.Subject.CommonName
 		config.DefaultCountry = firstOrEmpty(cert.Subject.Country)
 		config.DefaultLocality = firstOrEmpty(cert.Subject.Locality)
 		config.DefaultOrganization = firstOrEmpty(cert.Subject.Organization)
-		config.DefaultEmail = cert.EmailAddresses[0] // Usamos el primer correo si está disponible.
-		config.DefaultKeySize = 2048                 // Valor fijo, ya que no se obtiene del certificado.
+		config.DefaultEmail = firstOrEmpty(cert.EmailAddresses)
+		config.DefaultKeySize = 2048 // Valor fijo.
 
 	case "CERTIFICATE REQUEST":
+		// Procesar archivo CSR
 		csr, err := x509.ParseCertificateRequest(block.Bytes)
 		if err != nil {
 			return fmt.Errorf("error parsing CSR: %v", err)
 		}
+		config.DefaultDomain = csr.Subject.CommonName
 		config.DefaultCountry = firstOrEmpty(csr.Subject.Country)
 		config.DefaultLocality = firstOrEmpty(csr.Subject.Locality)
 		config.DefaultOrganization = firstOrEmpty(csr.Subject.Organization)
@@ -51,7 +55,7 @@ func ExtractInfo(filePath, outputPath string) error {
 		return fmt.Errorf("unsupported PEM type: %s", block.Type)
 	}
 
-	// Guardar la información en el archivo YAML
+	// Guardar la información extraída en YAML
 	if err := saveAsYAML(config, outputPath); err != nil {
 		return err
 	}

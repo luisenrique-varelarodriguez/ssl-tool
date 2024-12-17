@@ -9,17 +9,19 @@ import (
 
 // Config estructura para el archivo de configuración YAML
 type Config struct {
-	DefaultCountry           string `yaml:"default_country"`
-	DefaultLocality          string `yaml:"default_locality"`
-	DefaultOrganization      string `yaml:"default_organization"`
+	DefaultDomain            string `yaml:"default_domain,omitempty"`            // Dominio (Common Name)
+	DefaultCountry           string `yaml:"default_country,omitempty"`           // País
+	DefaultLocality          string `yaml:"default_locality,omitempty"`          // Localidad
+	DefaultOrganization      string `yaml:"default_organization,omitempty"`      // Organización
 	DefaultOrganizationalUnit string `yaml:"default_organizational_unit,omitempty"`
-	DefaultEmail             string `yaml:"default_email,omitempty"`
-	DefaultKeySize           int    `yaml:"default_key_size"`
+	DefaultEmail             string `yaml:"default_email,omitempty"`             // Correo electrónico
+	DefaultKeySize           int    `yaml:"default_key_size,omitempty"`          // Tamaño de clave
 }
 
 // GenerateConfigTemplate genera un archivo de configuración YAML predeterminado.
 func GenerateConfigTemplate(outputPath string) error {
 	defaultTemplate := Config{
+		DefaultDomain:            "example.com",
 		DefaultCountry:           "US",
 		DefaultLocality:          "New York",
 		DefaultOrganization:      "DefaultOrg",
