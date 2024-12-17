@@ -1,195 +1,204 @@
-# Gestor de Certificados SSL
 
-Este script en Bash es una herramienta interactiva para gestionar certificados SSL. Proporciona una serie de funcionalidades que permiten crear claves privadas, CSRs, certificados finales y convertirlos al formato Base64, además de verificar la coherencia entre los componentes de los certificados.
+# SSL Tool
 
----
+**SSL Tool** es una herramienta de línea de comandos escrita en Go para gestionar certificados SSL, generar CSRs, verificar la consistencia entre clave privada/CSR/certificado, y realizar otras operaciones relacionadas con SSL. Está diseñada para funcionar tanto de manera no interactiva (ideal para entornos automatizados o CI/CD) como en modo interactivo (tipo asistente), facilitando su uso a personas que no recuerden todos los flags o valores necesarios.
 
-## Características
+## Características principales
 
-1. **Crear Clave Privada y CSR**  
-   Genera una clave privada y un CSR (Certificate Signing Request) con los datos del usuario.
+- **Generación de CSR y clave privada:**  
+  Crea una clave RSA y un CSR con información personalizada (dominio, país, localidad, organización).  
+  El CSR se genera en una carpeta con el nombre derivado del dominio (por ejemplo: `example_com/`) dentro del directorio actual.
 
-2. **Crear Certificado Final (Cadena Completa)**  
-   Combina un certificado firmado por la autoridad certificadora (CA) con un certificado intermedio para generar un certificado final válido.
+- **Extracción de información de CRT/CSR:**  
+  Imprime detalles de un certificado o CSR (Common Name, Organización, Fechas de validez, etc.).  
+  Además, guarda la información en el mismo archivo YAML generado por `generate-config` (`ssl-tool-config.yaml`).
 
-3. **Crear Certificado y Clave en Base64**  
-   Convierte el certificado final y la clave privada al formato Base64 para casos en los que se requiera este formato.
+- **Verificación de hashes (private key, CSR, cert):**  
+  Comprueba que el trío clave privada, CSR y certificado concuerden, calculando el hash del módulo de cada uno.
 
-4. **Verificar Hashes (Clave Privada, CSR y Certificado)**  
-   Comprueba que los hashes de la clave privada, CSR y certificado coincidan, asegurando que todos los componentes están relacionados.
+- **Verificación de expiración:**  
+  Muestra cuántos días faltan para que un certificado caduque.
 
----
+- **Fingerprint (huella digital):**  
+  Muestra el fingerprint SHA256 de un certificado.
+
+- **Modo interactivo:**  
+  Si se activa `--interactive`, la herramienta funciona como un asistente que pregunta todos los datos necesarios, mostrando los valores por defecto si existen en flags o en el archivo de configuración. Esto permite no tener que recordar todos los parámetros.
+
+- **Archivo de configuración YAML:**  
+  Permite establecer valores por defecto (país, localidad, organización, etc.) en un archivo `ssl-tool-config.yaml` en el directorio actual.  
+  Si existe, la herramienta lo carga antes de ejecutar comandos, facilitando la reutilización de configuraciones.  
+  Además, comandos como `extract-info` guardan su salida en este archivo.
 
 ## Requisitos
 
-- **Sistema operativo:** Linux/MacOS (o WSL en Windows con un entorno Bash).
-- **OpenSSL:** Debe estar instalado en tu sistema.  
-  Puedes verificarlo ejecutando:
-  ```bash
-  openssl version
-  ```
+- Go 1.16 o superior.
+- (Opcional) Un archivo de configuración `ssl-tool-config.yaml` en el directorio actual, generado con `ssl-tool generate-config`.
 
----
+## Instalación
 
-## Cómo usar el script
+### Compilar el binario
 
-### 1. Descarga y prepara el script
-
-1. Guarda el script como `ssl_cert_manager.sh`.
-2. Dale permisos de ejecución:
-   ```bash
-   chmod +x ssl_cert_manager.sh
-   ```
-
-### 2. Ejecuta el script
+Para compilar el programa en un binario ejecutable, ejecuta lo siguiente desde la raíz del proyecto:
 
 ```bash
-./ssl_cert_manager.sh
+go build -o ssl-tool cmd/main.go
 ```
 
-### 3. Selecciona una opción del menú principal
+Esto generará un archivo **`ssl-tool`** en el directorio actual.
 
-Cuando ejecutes el script, verás el siguiente menú:
+### Mover el binario al PATH del sistema
 
-```plaintext
-=== Gestor de Certificados SSL ===
-1. Crear Clave Privada y CSR
-2. Crear Certificado Final (cadena completa)
-3. Crear Certificado y Clave en Base64
-4. Verificar Hashes (Clave Privada, CSR y Certificado)
-5. Salir
+Para ejecutar `ssl-tool` como un comando desde cualquier lugar, mueve el binario a un directorio incluido en el `PATH` del sistema.
+
+#### En Linux/macOS:
+
+```bash
+sudo mv ssl-tool /usr/local/bin/
 ```
 
-Introduce el número correspondiente a la acción que deseas realizar.
+Verifica que esté correctamente instalado:
 
----
-
-## Funcionalidades detalladas
-
-### Opción 1: Crear Clave Privada y CSR
-
-Esta opción genera:
-- Una clave privada (`.key`).
-- Un CSR (`.csr`) basado en los datos proporcionados por el usuario.
-
-**Pasos:**
-1. Introduce el nombre del dominio (por ejemplo, `example.com`).
-2. Proporciona información para el CSR:
-   - País (`C`).
-   - Localidad (`L`).
-   - Organización (`O`).
-   - Nombre común (dominio).
-
-**Salida:**
-- Clave privada: `example_com.key`.
-- CSR: `example_com.csr`.
-
----
-
-### Opción 2: Crear Certificado Final (Cadena Completa)
-
-Esta opción combina un certificado firmado por la CA con un certificado intermedio para generar un certificado final.
-
-**Pasos:**
-1. Introduce la ruta del certificado firmado (`tu_certificado.crt`).
-2. Introduce la ruta del certificado intermedio (`intermediate.crt`).
-3. Proporciona una ubicación para guardar el certificado final.
-
-**Salida:**
-- Certificado final con cadena completa: `certificado_final_con_cadena.crt`.
-
-**Verificación automática:**
-El script verifica que el certificado final sea válido y muestra mensajes de éxito o error.
-
----
-
-### Opción 3: Crear Certificado y Clave en Base64
-
-Convierte:
-- El certificado final (`.crt`) al formato Base64.
-- La clave privada (`.key`) al formato Base64.
-
-**Pasos:**
-1. Introduce la ruta del certificado final (`certificado_final.crt`).
-2. Introduce la ruta de la clave privada (`example_com.key`).
-
-**Salida:**
-- Certificado en Base64: `certificado_final_base64.crt`.
-- Clave privada en Base64: `example_com_base64.key`.
-
----
-
-### Opción 4: Verificar Hashes (Clave Privada, CSR y Certificado)
-
-Comprueba que los hashes de la clave privada, CSR y certificado coincidan. Esto asegura que todos los componentes están relacionados entre sí.
-
-**Pasos:**
-1. Introduce la ruta de la clave privada (`example_com.key`).
-2. Introduce la ruta del CSR (`example_com.csr`).
-3. Introduce la ruta del certificado final (`certificado_final.crt`).
-
-**Salida:**
-- Muestra los hashes calculados de cada componente.
-- Verifica si coinciden y muestra un mensaje de éxito o error.
-
-**Ejemplo de salida:**
-
-```plaintext
-Calculando hashes...
- - Hash de la clave privada: MD5(stdin)= 86b79ebd9ef04f39b904043d9a65bfcd
- - Hash del CSR: MD5(stdin)= 86b79ebd9ef04f39b904043d9a65bfcd
- - Hash del certificado: MD5(stdin)= 86b79ebd9ef04f39b904043d9a65bfcd
-
-=== Verificación exitosa: Los hashes coinciden. ===
+```bash
+ssl-tool --help
 ```
 
----
+#### En Windows:
 
-## Errores comunes y soluciones
+1. Compila el binario para Windows:
 
-1. **Error: OpenSSL no está instalado.**
-   - Solución: Instala OpenSSL en tu sistema.
-     ```bash
-     sudo apt install openssl  # En distribuciones basadas en Debian
-     brew install openssl     # En macOS
-     ```
+   ```bash
+   GOOS=windows GOARCH=amd64 go build -o ssl-tool.exe cmd/main.go
+   ```
 
-2. **Error: El archivo no existe.**
-   - Solución: Verifica que la ruta del archivo proporcionado sea correcta.
+2. Copia `ssl-tool.exe` a un directorio incluido en el `PATH` del sistema, como `C:\Windows\`.
 
-3. **Error: Los hashes no coinciden.**
-   - Solución: Asegúrate de usar los archivos correctos que corresponden a la misma clave privada y CSR.
+3. Verifica que esté correctamente instalado:
 
----
+   ```bash
+   ssl-tool.exe --help
+   ```
+
+## Uso general
+
+```bash
+ssl-tool [flags] [command]
+```
+
+Para ver la lista de comandos disponibles:
+
+```bash
+ssl-tool --help
+```
+
+## Modo interactivo
+
+Si se usa `--interactive`, la herramienta preguntará todos los datos necesarios. Por ejemplo:
+
+```bash
+ssl-tool generate-csr --interactive
+```
+
+La herramienta mostrará prompts para el dominio, país, localidad, organización, etc. Si se han pasado flags o hay valores por defecto en la configuración, se mostrarán como sugerencias. El usuario puede presionar Enter para aceptar el valor por defecto o escribir uno nuevo.
+
+En modo no interactivo, si faltan parámetros, el comando falla y muestra un mensaje de error indicando qué falta.
+
+## Comandos principales
+
+### `generate-config`
+
+Genera un archivo YAML con valores por defecto.
+
+```bash
+ssl-tool generate-config
+```
+
+Esto crea (o sobrescribe) `ssl-tool-config.yaml` en el directorio actual.
+
+### `generate-csr`
+
+Genera un CSR y una clave privada.
+
+```bash
+ssl-tool generate-csr --domain example.com --country US --locality "New York" --organization ExampleOrg
+```
+
+- **Modo interactivo**:
+```bash
+ssl-tool generate-csr --interactive
+```
+
+El CSR y la clave se generan en una carpeta `example_com/` dentro del directorio actual.
+
+### `extract-info`
+
+Extrae información de un certificado o CSR y la guarda en `ssl-tool-config.yaml`.
+
+```bash
+ssl-tool extract-info --file path/to/cert.crt
+```
+
+### `verify-hashes`
+
+Verifica que la clave privada, el CSR y el certificado coincidan.
+
+```bash
+ssl-tool verify-hashes --key path/to/key.key --csr path/to/req.csr --cert path/to/cert.crt
+```
+
+### `check-expiration`
+
+Muestra cuántos días quedan hasta la expiración del certificado.
+
+```bash
+ssl-tool check-expiration --cert path/to/cert.crt
+```
+
+### `fingerprint`
+
+Muestra el fingerprint SHA256 de un certificado.
+
+```bash
+ssl-tool fingerprint --cert path/to/cert.crt
+```
 
 ## Ejemplo de flujo completo
 
-1. **Generar clave privada y CSR:**
-   ```bash
-   ./ssl_cert_manager.sh
-   Selecciona una opción (1-5): 1
-   ```
-   Proporciona el dominio y los datos requeridos.
+1. Generar un archivo de configuración YAML predeterminado:
 
-2. **Crear certificado final:**
    ```bash
-   ./ssl_cert_manager.sh
-   Selecciona una opción (1-5): 2
+   ssl-tool generate-config
    ```
-   Introduce las rutas de los certificados y guarda el certificado final.
 
-3. **Convertir a Base64:**
+2. Generar un CSR y una clave privada:
+
    ```bash
-   ./ssl_cert_manager.sh
-   Selecciona una opción (1-5): 3
+   ssl-tool generate-csr --domain example.com
    ```
-   Proporciona las rutas del certificado y la clave privada.
 
-4. **Verificar hashes:**
+3. Extraer información del CSR y actualizar el YAML:
+
    ```bash
-   ./ssl_cert_manager.sh
-   Selecciona una opción (1-5): 4
+   ssl-tool extract-info --file example_com/example_com.csr
    ```
-   Introduce las rutas de la clave privada, CSR y certificado.
 
----
+4. Verificar consistencia de la clave, CSR y certificado:
+
+   ```bash
+   ssl-tool verify-hashes --key example_com/example_com.key --csr example_com/example_com.csr --cert example_com/example_com.crt
+   ```
+
+5. Comprobar expiración del certificado:
+
+   ```bash
+   ssl-tool check-expiration --cert example_com/example_com.crt
+   ```
+
+## Conclusión
+
+SSL Tool proporciona un flujo de trabajo flexible para la gestión de certificados:
+
+- **No interactivo:** Para entornos automatizados, CI/CD, o usuarios que conocen los flags.
+- **Interactivo:** Para usuarios que prefieren una experiencia guiada paso a paso.
+
+La configuración YAML, junto con la exportación automática de datos en `extract-info`, hace que la herramienta sea cómoda, segura y fácil de usar.
