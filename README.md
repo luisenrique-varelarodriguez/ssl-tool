@@ -193,12 +193,3 @@ ssl-tool fingerprint --cert path/to/cert.crt
    ```bash
    ssl-tool check-expiration --cert example_com/example_com.crt
    ```
-
-## Conclusión
-
-SSL Tool proporciona un flujo de trabajo flexible para la gestión de certificados:
-
-- **No interactivo:** Para entornos automatizados, CI/CD, o usuarios que conocen los flags.
-- **Interactivo:** Para usuarios que prefieren una experiencia guiada paso a paso.
-
-La configuración YAML, junto con la exportación automática de datos en `extract-info`, hace que la herramienta sea cómoda, segura y fácil de usar.
